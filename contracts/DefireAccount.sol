@@ -18,7 +18,7 @@ contract DefireAccount is Initializable, Operable {
     string public constant VERSION = "1.0.0";
 
     event AccountOperationExecuted(Operation operation, bool checkSafe);
-    event AccountOperationsExecuted(Operation[] _operations,  bool _checkSafe);
+    event AccountOperationsExecuted(Operation[] _operations, bool _checkSafe);
 
     /**
      * Initialize the contract.

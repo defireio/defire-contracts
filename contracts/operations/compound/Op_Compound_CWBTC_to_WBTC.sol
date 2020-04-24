@@ -7,25 +7,25 @@ import "./ICToken.sol";
 import "../../base/IOperation.sol";
 
 
-contract Op_Compound_CDAI_to_DAI is Initializable, IOperation {
+contract Op_Compound_CWBTC_to_WBTC is Initializable, IOperation {
     string public constant VERSION = "1.0.0";
 
     using SafeMath for uint256;
 
-    event OperationExecuted(uint256 amoundCDAI, uint256 amountDAI);
+    event OperationExecuted(uint256 amoundCWBTC, uint256 amountWBTC);
 
-    address public DAI;
-    address public cDAI;
+    address public WBTC;
+    address public cWBTC;
 
     function initialize() public initializer {
-        DAI = address($(DAI));
-        cDAI = address($(CDAI));
+        WBTC = address($(WBTC));
+        cWBTC = address($(CWBTC));
     }
 
     /**
      * Execute the operation.
      * @param _inAmounts amounts of assets in.
-     * @param _params params is the amount to convert to CDAI
+     * @param _params params is the amount to convert to CWBTC
      */
     function operate(uint256[] calldata _inAmounts, bytes calldata _params)
         external
@@ -35,31 +35,34 @@ contract Op_Compound_CDAI_to_DAI is Initializable, IOperation {
         require(msg.value == 0, "This operation does not receive ethers");
 
         //In assets amounts
-        require(_inAmounts.length != 0, "Need to set CDAI amount");
-        uint256 amountCDAI = _inAmounts[0];
+        require(_inAmounts.length != 0, "Need to set CWBTC amount");
+        uint256 amountCWBTC = _inAmounts[0];
 
         //Get in assets
-        if (amountCDAI > 0) {
-            IERC20(cDAI).transferFrom(msg.sender, address(this), amountCDAI);
+        if (amountCWBTC > 0) {
+            IERC20(cWBTC).transferFrom(msg.sender, address(this), amountCWBTC);
         }
 
-        //Get total balance of CDAI, some may come from other operations
-        uint256 finalAmountCDAI = IERC20(cDAI).balanceOf(address(this));
+        //Get total balance of CWBTC, some may come from other operations
+        uint256 finalAmountCWBTC = IERC20(cWBTC).balanceOf(address(this));
 
         //Execute operation
-        require(ICToken(cDAI).redeem(finalAmountCDAI) == 0, "operation failed");
-        require(IERC20(cDAI).balanceOf(address(this)) == 0, "cdai remainder");
+        require(
+            ICToken(cWBTC).redeem(finalAmountCWBTC) == 0,
+            "operation failed"
+        );
+        require(IERC20(cWBTC).balanceOf(address(this)) == 0, "CWBTC remainder");
 
         //Send out assets back
-        uint256 amountDAI = IERC20(DAI).balanceOf(address(this));
-        IERC20(DAI).transfer(msg.sender, amountDAI);
-        require(IERC20(DAI).balanceOf(address(this)) == 0, "dai remainder");
+        uint256 amountWBTC = IERC20(WBTC).balanceOf(address(this));
+        IERC20(WBTC).transfer(msg.sender, amountWBTC);
+        require(IERC20(WBTC).balanceOf(address(this)) == 0, "WBTC remainder");
 
-        emit OperationExecuted(finalAmountCDAI, amountDAI);
+        emit OperationExecuted(finalAmountCWBTC, amountWBTC);
 
         //Returns out assets amounts
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = amountDAI;
+        amounts[0] = amountWBTC;
         return amounts;
     }
 
@@ -73,7 +76,7 @@ contract Op_Compound_CDAI_to_DAI is Initializable, IOperation {
         returns (address[] memory)
     {
         address[] memory _assets = new address[](1);
-        _assets[0] = address(cDAI);
+        _assets[0] = address(cWBTC);
         return _assets;
     }
 
@@ -87,7 +90,7 @@ contract Op_Compound_CDAI_to_DAI is Initializable, IOperation {
         returns (address[] memory)
     {
         address[] memory _assets = new address[](1);
-        _assets[0] = address(DAI);
+        _assets[0] = address(WBTC);
         return _assets;
     }
 }

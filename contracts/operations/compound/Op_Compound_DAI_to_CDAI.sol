@@ -3,7 +3,7 @@ pragma solidity ^0.5.0;
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
-import "./ICDAI.sol";
+import "./ICToken.sol";
 import "../../base/IOperation.sol";
 
 
@@ -52,7 +52,7 @@ contract Op_Compound_DAI_to_CDAI is Initializable, IOperation {
         uint256 finalAmountDAI = IERC20(DAI).balanceOf(address(this));
 
         //Execute operation
-        require(ICDAI(cDAI).mint(finalAmountDAI) == 0, "operation failed");
+        require(ICToken(cDAI).mint(finalAmountDAI) == 0, "operation failed");
         require(IERC20(DAI).balanceOf(address(this)) == 0, "dai remainder");
 
         //Send out assets back

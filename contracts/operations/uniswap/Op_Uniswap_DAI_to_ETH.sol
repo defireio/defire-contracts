@@ -75,10 +75,16 @@ contract Op_Uniswap_DAI_to_ETH is Initializable, IOperation {
             IERC20(DAI).transferFrom(msg.sender, address(this), amountDAI);
         }
 
+        //Get total balance of DAI, some may come from other operations
+        uint256 finalAmountDAI = IERC20(DAI).balanceOf(address(this));
+
         //Execute operation
         require(
-            IUniswap(UNISWAP).tokenToEthSwapInput(amountDAI, minEth, deadline) >
-                0,
+            IUniswap(UNISWAP).tokenToEthSwapInput(
+                finalAmountDAI,
+                minEth,
+                deadline
+            ) > 0,
             "operation failed"
         );
         require(IERC20(DAI).balanceOf(address(this)) == 0, "DAI remainder");
@@ -88,7 +94,7 @@ contract Op_Uniswap_DAI_to_ETH is Initializable, IOperation {
         msg.sender.transfer(ethBalance);
         require(address(this).balance == 0, "ETH remainder");
 
-        emit OperationExecuted(amountDAI, minEth, deadline, ethBalance);
+        emit OperationExecuted(finalAmountDAI, minEth, deadline, ethBalance);
 
         //Returns out assets amounts
         uint256[] memory amounts = new uint256[](1);

@@ -78,10 +78,16 @@ contract Op_Uniswap_DAI_to_WETH is Initializable, IOperation {
             IERC20(DAI).transferFrom(msg.sender, address(this), amountDAI);
         }
 
+        //Get total balance of DAI, some may come from other operations
+        uint256 finalAmountDAI = IERC20(DAI).balanceOf(address(this));
+
         //Execute operation
         require(
-            IUniswap(UNISWAP).tokenToEthSwapInput(amountDAI, minEth, deadline) >
-                0,
+            IUniswap(UNISWAP).tokenToEthSwapInput(
+                finalAmountDAI,
+                minEth,
+                deadline
+            ) > 0,
             "operation failed"
         );
         require(IERC20(DAI).balanceOf(address(this)) == 0, "dai remainder");
@@ -100,7 +106,7 @@ contract Op_Uniswap_DAI_to_WETH is Initializable, IOperation {
         IERC20(WETH).transfer(msg.sender, amountWETH);
         require(IERC20(WETH).balanceOf(address(this)) == 0, "WETH remainder");
 
-        emit OperationExecuted(amountDAI, minEth, deadline, amountWETH);
+        emit OperationExecuted(finalAmountDAI, minEth, deadline, amountWETH);
 
         //Returns out assets amounts
         uint256[] memory amounts = new uint256[](1);

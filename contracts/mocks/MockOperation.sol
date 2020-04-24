@@ -27,7 +27,7 @@ contract MockOperation is Initializable, IOperation {
         address[] memory _outAssets,
         uint8 _times,
         uint8 _divisor
-    ) public initializer payable {
+    ) public payable initializer {
         name = _name;
         times = _times;
         divisor = _divisor;

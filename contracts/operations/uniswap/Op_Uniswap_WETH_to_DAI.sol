@@ -73,17 +73,20 @@ contract Op_Uniswap_WETH_to_DAI is Initializable, IOperation {
             IERC20(WETH).transferFrom(msg.sender, address(this), amountWETH);
         }
 
+        //Get total balance of WETH, some may come from other operations
+        uint256 finalAmountWETH = IERC20(WETH).balanceOf(address(this));
+
         //Transformed WETH received to ETH
-        IWETH(WETH).withdraw(amountWETH);
+        IWETH(WETH).withdraw(finalAmountWETH);
         require(
             IERC20(WETH).balanceOf(address(this)) == 0 &&
-                address(this).balance == amountWETH,
+                address(this).balance == finalAmountWETH,
             "failed weth unwrap"
         );
 
         //Execute operation
         require(
-            IUniswap(UNISWAP).ethToTokenSwapInput.value(amountWETH)(
+            IUniswap(UNISWAP).ethToTokenSwapInput.value(finalAmountWETH)(
                 minDAI,
                 deadline
             ) > 0,
@@ -96,7 +99,7 @@ contract Op_Uniswap_WETH_to_DAI is Initializable, IOperation {
         IERC20(DAI).transfer(msg.sender, amountDAI);
         require(IERC20(DAI).balanceOf(address(this)) == 0, "DAI remainder");
 
-        emit OperationExecuted(amountWETH, minDAI, deadline, amountDAI);
+        emit OperationExecuted(finalAmountWETH, minDAI, deadline, amountDAI);
 
         //Returns out assets amounts
         uint256[] memory amounts = new uint256[](1);

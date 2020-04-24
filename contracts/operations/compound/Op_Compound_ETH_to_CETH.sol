@@ -3,63 +3,62 @@ pragma solidity ^0.5.0;
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
-import "./ICToken.sol";
+import "./ICEth.sol";
 import "../../base/IOperation.sol";
 
 
-contract Op_Compound_CDAI_to_DAI is Initializable, IOperation {
+contract Op_Compound_ETH_to_CETH is Initializable, IOperation {
     string public constant VERSION = "1.0.0";
 
     using SafeMath for uint256;
 
-    event OperationExecuted(uint256 amoundCDAI, uint256 amountDAI);
+    event OperationExecuted(uint256 amountETH, uint256 amountCETH);
 
-    address public DAI;
-    address public cDAI;
+    address public ETH;
+    address public cETH;
 
     function initialize() public initializer {
-        DAI = address($(DAI));
-        cDAI = address($(CDAI));
+        ETH = address($(ETH));
+        cETH = address($(CETH));
     }
 
     /**
      * Execute the operation.
      * @param _inAmounts amounts of assets in.
-     * @param _params params is the amount to convert to CDAI
+     * @param _params params is the amount of ETH to convert to CETH
      */
     function operate(uint256[] calldata _inAmounts, bytes calldata _params)
         external
         payable
         returns (uint256[] memory)
     {
-        require(msg.value == 0, "This operation does not receive ethers");
-
         //In assets amounts
-        require(_inAmounts.length != 0, "Need to set CDAI amount");
-        uint256 amountCDAI = _inAmounts[0];
+        require(_inAmounts.length != 0, "Need to set ETH amount");
+        uint256 amountETH = _inAmounts[0];
 
         //Get in assets
-        if (amountCDAI > 0) {
-            IERC20(cDAI).transferFrom(msg.sender, address(this), amountCDAI);
-        }
+        require(
+            msg.value == amountETH,
+            "Incorrect amount of ethers sent to the operation"
+        );
 
-        //Get total balance of CDAI, some may come from other operations
-        uint256 finalAmountCDAI = IERC20(cDAI).balanceOf(address(this));
+        //Get total balance of ETH, some may come from other operations
+        uint256 finalAmountETH = address(this).balance;
 
         //Execute operation
-        require(ICToken(cDAI).redeem(finalAmountCDAI) == 0, "operation failed");
-        require(IERC20(cDAI).balanceOf(address(this)) == 0, "cdai remainder");
+        ICEth(cETH).mint.value(finalAmountETH)();
+        require(address(this).balance == 0, "ETH remainder");
 
         //Send out assets back
-        uint256 amountDAI = IERC20(DAI).balanceOf(address(this));
-        IERC20(DAI).transfer(msg.sender, amountDAI);
-        require(IERC20(DAI).balanceOf(address(this)) == 0, "dai remainder");
+        uint256 amountCETH = IERC20(cETH).balanceOf(address(this));
+        IERC20(cETH).transfer(msg.sender, amountCETH);
+        require(IERC20(cETH).balanceOf(address(this)) == 0, "CETH remainder");
 
-        emit OperationExecuted(finalAmountCDAI, amountDAI);
+        emit OperationExecuted(finalAmountETH, amountCETH);
 
         //Returns out assets amounts
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = amountDAI;
+        amounts[0] = amountCETH;
         return amounts;
     }
 
@@ -73,7 +72,7 @@ contract Op_Compound_CDAI_to_DAI is Initializable, IOperation {
         returns (address[] memory)
     {
         address[] memory _assets = new address[](1);
-        _assets[0] = address(cDAI);
+        _assets[0] = address(ETH);
         return _assets;
     }
 
@@ -87,7 +86,7 @@ contract Op_Compound_CDAI_to_DAI is Initializable, IOperation {
         returns (address[] memory)
     {
         address[] memory _assets = new address[](1);
-        _assets[0] = address(DAI);
+        _assets[0] = address(cETH);
         return _assets;
     }
 }

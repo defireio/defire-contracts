@@ -1,18 +1,17 @@
 pragma solidity ^0.5.0;
 
+
 /**
  * @title Compound's CErc20 Contract
  * @notice CTokens which wrap an EIP-20 underlying
  * @author Compound
  */
-contract ICDAI {
+contract ICEth {
     /**
      * @notice Sender supplies assets into the market and receives cTokens in exchange
-     * @dev Accrues interest whether or not the operation succeeds, unless reverted
-     * @param mintAmount The amount of the underlying asset to supply
-     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     * @dev Reverts upon any failure
      */
-    function mint(uint256 mintAmount) external returns (uint256);
+    function mint() external payable;
 
     /**
      * @notice Sender redeems cTokens in exchange for the underlying asset
