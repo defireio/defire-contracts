@@ -3,23 +3,25 @@ pragma solidity ^0.5.0;
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "./ICEth.sol";
+import "../common/IWETH.sol";
 import "../../base/IOperation.sol";
 
 
-contract Op_Compound_CETH_to_ETH is IOperation {
+contract Op_Unwrap_ETH is IOperation {
     string public constant VERSION = "1.0.0";
 
     using SafeMath for uint256;
 
-    event OperationExecuted(uint256 amoundCETH, uint256 amountETH);
+    event OperationExecuted(
+        uint256 amountWETH
+    );
 
     address public ETH;
-    address public cETH;
+    address public WETH;
 
     constructor() public {
-        ETH = address($(ETH));
-        cETH = address($(CETH));
+        ETH = address(0);
+        WETH = address($(WETH));
     }
 
     /**
@@ -30,7 +32,7 @@ contract Op_Compound_CETH_to_ETH is IOperation {
     /**
      * Execute the operation.
      * @param _inAmounts amounts of assets in.
-     * @param _params params is the amount to convert to CETH
+     * @param _params params is the amount of WETH to unwrap
      */
     function operate(uint256[] calldata _inAmounts, bytes calldata _params)
         external
@@ -40,31 +42,34 @@ contract Op_Compound_CETH_to_ETH is IOperation {
         require(msg.value == 0, "This operation does not receive ethers");
 
         //In assets amounts
-        require(_inAmounts.length != 0, "Need to set CETH amount");
-        uint256 amountCETH = _inAmounts[0];
+        require(_inAmounts.length != 0, "Need to set WETH amount");
+        uint256 amountWETH = _inAmounts[0];
 
         //Get in assets
-        if (amountCETH > 0) {
-            IERC20(cETH).transferFrom(msg.sender, address(this), amountCETH);
+        if (amountWETH > 0) {
+            IERC20(WETH).transferFrom(msg.sender, address(this), amountWETH);
         }
 
-        //Get total balance of CETH, some may come from other operations
-        uint256 finalAmountCETH = IERC20(cETH).balanceOf(address(this));
+        //Get total balance of WETH, some may come from other operations
+        uint256 finalAmountWETH = IERC20(WETH).balanceOf(address(this));
 
-        //Execute operation
-        require(ICEth(cETH).redeem(finalAmountCETH) == 0, "operation failed");
-        require(IERC20(cETH).balanceOf(address(this)) == 0, "CETH remainder");
+        //Transformed WETH received to ETH
+        IWETH(WETH).withdraw(finalAmountWETH);
+        require(
+            IERC20(WETH).balanceOf(address(this)) == 0 &&
+                address(this).balance == finalAmountWETH,
+            "failed weth unwrap"
+        );
 
-        //Send out assets back
-        uint256 ethBalance = address(this).balance;
-        Address.sendValue(msg.sender, ethBalance);
+        //Send out eth back
+        Address.sendValue(msg.sender, finalAmountWETH);
         require(address(this).balance == 0, "ETH remainder");
 
-        emit OperationExecuted(finalAmountCETH, ethBalance);
+        emit OperationExecuted(finalAmountWETH);
 
         //Returns out assets amounts
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = ethBalance;
+        amounts[0] = finalAmountWETH;
         return amounts;
     }
 
@@ -78,7 +83,7 @@ contract Op_Compound_CETH_to_ETH is IOperation {
         returns (address[] memory)
     {
         address[] memory _assets = new address[](1);
-        _assets[0] = address(cETH);
+        _assets[0] = address(WETH);
         return _assets;
     }
 

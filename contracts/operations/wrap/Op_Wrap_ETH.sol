@@ -2,68 +2,65 @@ pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "./ICToken.sol";
+import "../common/IWETH.sol";
 import "../../base/IOperation.sol";
 
 
-contract Op_Compound_WBTC_to_CWBTC is IOperation {
+contract Op_Wrap_ETH is IOperation {
     string public constant VERSION = "1.0.0";
 
     using SafeMath for uint256;
 
-    event OperationExecuted(uint256 amoundWBTC, uint256 amountCWBTC);
+    event OperationExecuted(uint256 amountETH);
 
-    address public WBTC;
-    address public cWBTC;
+    address public ETH;
+    address public WETH;
 
     constructor() public {
-        WBTC = address($(WBTC));
-        cWBTC = address($(CWBTC));
-        approveToken();
-    }
-
-    function approveToken() private {
-        IERC20(WBTC).approve(cWBTC, uint256(-1));
+        ETH = address(0);
+        WETH = address($(WETH));
     }
 
     /**
      * Execute the operation.
      * @param _inAmounts amounts of assets in.
-     * @param _params params is the amount of WBTC to convert to CWBTC
+     * @param _params params is the amount of ETH to wrap
      */
     function operate(uint256[] calldata _inAmounts, bytes calldata _params)
         external
         payable
         returns (uint256[] memory)
     {
-        require(msg.value == 0, "This operation does not receive ethers");
-
         //In assets amounts
-        require(_inAmounts.length != 0, "Need to set WBTC amount");
-        uint256 amountWBTC = _inAmounts[0];
+        require(_inAmounts.length != 0, "Need to set ETH amount");
+        uint256 amountETH = _inAmounts[0];
 
         //Get in assets
-        if (amountWBTC > 0) {
-            IERC20(WBTC).transferFrom(msg.sender, address(this), amountWBTC);
-        }
+        require(
+            msg.value == amountETH,
+            "Incorrect amount of ethers sent to the operation"
+        );
 
-        //Get total balance of WBTC, some may come from other operations
-        uint256 finalAmountWBTC = IERC20(WBTC).balanceOf(address(this));
+        //Get total balance of ETH, some may come from other operations
+        uint256 finalAmountETH = address(this).balance;
 
         //Execute operation
-        require(ICToken(cWBTC).mint(finalAmountWBTC) == 0, "operation failed");
-        require(IERC20(WBTC).balanceOf(address(this)) == 0, "WBTC remainder");
+        IWETH(WETH).deposit.value(finalAmountETH)();
+        require(
+            IERC20(WETH).balanceOf(address(this)) == finalAmountETH &&
+                address(this).balance == 0,
+            "Failed to wrap"
+        );
 
         //Send out assets back
-        uint256 amountCWBTC = IERC20(cWBTC).balanceOf(address(this));
-        IERC20(cWBTC).transfer(msg.sender, amountCWBTC);
-        require(IERC20(cWBTC).balanceOf(address(this)) == 0, "CWBTC remainder");
+        IERC20(WETH).transfer(msg.sender, finalAmountETH);
+        require(IERC20(WETH).balanceOf(address(this)) == 0, "WETH remainder");
 
-        emit OperationExecuted(finalAmountWBTC, amountCWBTC);
+        emit OperationExecuted(finalAmountETH);
 
         //Returns out assets amounts
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = amountCWBTC;
+        amounts[0] = finalAmountETH;
         return amounts;
     }
 
@@ -77,7 +74,7 @@ contract Op_Compound_WBTC_to_CWBTC is IOperation {
         returns (address[] memory)
     {
         address[] memory _assets = new address[](1);
-        _assets[0] = address(WBTC);
+        _assets[0] = address(ETH);
         return _assets;
     }
 
@@ -91,7 +88,7 @@ contract Op_Compound_WBTC_to_CWBTC is IOperation {
         returns (address[] memory)
     {
         address[] memory _assets = new address[](1);
-        _assets[0] = address(cWBTC);
+        _assets[0] = address(WETH);
         return _assets;
     }
 }

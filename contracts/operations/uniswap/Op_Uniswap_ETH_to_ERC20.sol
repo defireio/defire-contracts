@@ -6,24 +6,26 @@ import "./IUniswap.sol";
 import "../../base/IOperation.sol";
 
 
-contract Op_Uniswap_ETH_to_DAI is IOperation {
+contract Op_Uniswap_ETH_to_ERC20 is IOperation {
     string public constant VERSION = "1.0.0";
 
     using SafeMath for uint256;
 
     event OperationExecuted(
         uint256 amountETH,
-        uint256 minDAI,
+        uint256 minOutAsset,
         uint256 deadline,
-        uint256 amountDAI
+        uint256 amountOutAsset
     );
 
-    address payable public UNISWAP;
-    address public DAI;
+    address public outAsset;
+    address public exchange;
+    address public ETH;
 
-    constructor() public {
-        UNISWAP = address($(UNISWAP));
-        DAI = address($(DAI));
+    constructor(address _outAsset, address _exchange) public {
+        outAsset = _outAsset;
+        exchange = _exchange;
+        ETH = address(0);
     }
 
     /**
@@ -38,15 +40,15 @@ contract Op_Uniswap_ETH_to_DAI is IOperation {
     function getParams(bytes memory _params)
         public
         pure
-        returns (uint256 minEth, uint256 deadline)
+        returns (uint256 minOutAsset, uint256 deadline)
     {
-        (minEth, deadline) = abi.decode(_params, (uint256, uint256));
+        (minOutAsset, deadline) = abi.decode(_params, (uint256, uint256));
     }
 
     /**
      * Execute the operation.
      * @param _inAmounts amounts of assets in.
-     * @param _params params is the amount of ETH to swap to DAI, the min amount of DAI to get and the deadline
+     * @param _params params is the amount of ETH to swap to out asset, the min amount of out asset to get and the deadline
      */
     function operate(uint256[] calldata _inAmounts, bytes calldata _params)
         external
@@ -58,9 +60,9 @@ contract Op_Uniswap_ETH_to_DAI is IOperation {
         uint256 amountETH = _inAmounts[0];
 
         //Get params
-        uint256 minDAI;
+        uint256 minOutAsset;
         uint256 deadline;
-        (minDAI, deadline) = getParams(_params);
+        (minOutAsset, deadline) = getParams(_params);
 
         //Get in assets
         require(
@@ -73,8 +75,8 @@ contract Op_Uniswap_ETH_to_DAI is IOperation {
 
         //Execute operation
         require(
-            IUniswap(UNISWAP).ethToTokenSwapInput.value(finalAmountETH)(
-                minDAI,
+            IUniswap(exchange).ethToTokenSwapInput.value(finalAmountETH)(
+                minOutAsset,
                 deadline
             ) > 0,
             "operation failed"
@@ -82,15 +84,15 @@ contract Op_Uniswap_ETH_to_DAI is IOperation {
         require(address(this).balance == 0, "eth remainder");
 
         //Send out assets back
-        uint256 amountDAI = IERC20(DAI).balanceOf(address(this));
-        IERC20(DAI).transfer(msg.sender, amountDAI);
-        require(IERC20(DAI).balanceOf(address(this)) == 0, "DAI remainder");
+        uint256 amountOutAsset = IERC20(outAsset).balanceOf(address(this));
+        IERC20(outAsset).transfer(msg.sender, amountOutAsset);
+        require(IERC20(outAsset).balanceOf(address(this)) == 0, "Out asset remainder");
 
-        emit OperationExecuted(finalAmountETH, minDAI, deadline, amountDAI);
+        emit OperationExecuted(finalAmountETH, minOutAsset, deadline, amountOutAsset);
 
         //Returns out assets amounts
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = amountDAI;
+        amounts[0] = amountOutAsset;
         return amounts;
     }
 
@@ -104,7 +106,7 @@ contract Op_Uniswap_ETH_to_DAI is IOperation {
         returns (address[] memory)
     {
         address[] memory _assets = new address[](1);
-        _assets[0] = address(0);
+        _assets[0] = ETH;
         return _assets;
     }
 
@@ -118,7 +120,7 @@ contract Op_Uniswap_ETH_to_DAI is IOperation {
         returns (address[] memory)
     {
         address[] memory _assets = new address[](1);
-        _assets[0] = address(DAI);
+        _assets[0] = address(outAsset);
         return _assets;
     }
 }
