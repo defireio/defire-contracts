@@ -2,12 +2,11 @@ pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "./ICEth.sol";
 import "../../base/IOperation.sol";
 
 
-contract Op_Compound_ETH_to_CETH is Initializable, IOperation {
+contract Op_Compound_ETH_to_CETH is IOperation {
     string public constant VERSION = "1.0.0";
 
     using SafeMath for uint256;
@@ -17,7 +16,7 @@ contract Op_Compound_ETH_to_CETH is Initializable, IOperation {
     address public ETH;
     address public cETH;
 
-    function initialize() public initializer {
+    constructor() public {
         ETH = address($(ETH));
         cETH = address($(CETH));
     }

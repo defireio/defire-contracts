@@ -1,6 +1,7 @@
 pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./base/Operable.sol";
@@ -129,7 +130,7 @@ contract DefireAccount is Initializable, Operable {
                 IERC20(asset).transfer(msg.sender, amount);
             } else {
                 uint256 ethBalance = address(this).balance;
-                msg.sender.transfer(ethBalance);
+                Address.sendValue(msg.sender, ethBalance);
             }
         }
     }

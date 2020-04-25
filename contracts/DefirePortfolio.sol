@@ -2,6 +2,7 @@ pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./base/Operable.sol";
 import "./registry/AssetRegistry.sol";
@@ -119,7 +120,7 @@ contract DefirePortfolio is
         );
         for (uint8 i = 0; i < _assets.length; i++) {
             if (_assets[i] == address(0)) {
-                _to.transfer(_amounts[i]);
+                Address.sendValue(_to, _amounts[i]);
             } else {
                 IERC20(_assets[i]).transfer(_to, _amounts[i]);
             }

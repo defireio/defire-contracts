@@ -1,13 +1,13 @@
 pragma solidity ^0.5.0;
 
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "./ICEth.sol";
 import "../../base/IOperation.sol";
 
 
-contract Op_Compound_CETH_to_ETH is Initializable, IOperation {
+contract Op_Compound_CETH_to_ETH is IOperation {
     string public constant VERSION = "1.0.0";
 
     using SafeMath for uint256;
@@ -17,7 +17,7 @@ contract Op_Compound_CETH_to_ETH is Initializable, IOperation {
     address public ETH;
     address public cETH;
 
-    function initialize() public initializer {
+    constructor() public {
         ETH = address($(ETH));
         cETH = address($(CETH));
     }
@@ -57,7 +57,7 @@ contract Op_Compound_CETH_to_ETH is Initializable, IOperation {
 
         //Send out assets back
         uint256 ethBalance = address(this).balance;
-        msg.sender.transfer(ethBalance);
+        Address.sendValue(msg.sender, ethBalance);
         require(address(this).balance == 0, "ETH remainder");
 
         emit OperationExecuted(finalAmountCETH, ethBalance);

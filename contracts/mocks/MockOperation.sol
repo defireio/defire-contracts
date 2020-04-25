@@ -1,8 +1,8 @@
 pragma solidity ^0.5.0;
 
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "../base/IOperation.sol";
 
 
@@ -10,7 +10,7 @@ import "../base/IOperation.sol";
  * @title MockOperation
  * @dev Operation to make tests
  */
-contract MockOperation is Initializable, IOperation {
+contract MockOperation is IOperation {
     using SafeMath for uint256;
 
     event OperationExecuted(uint256[] inAmounts, uint256[] outAmounts);
@@ -21,13 +21,13 @@ contract MockOperation is Initializable, IOperation {
     address[] inAssets;
     address[] outAssets;
 
-    function initialize(
+    constructor(
         string memory _name,
         address[] memory _inAssets,
         address[] memory _outAssets,
         uint8 _times,
         uint8 _divisor
-    ) public payable initializer {
+    ) public {
         name = _name;
         times = _times;
         divisor = _divisor;
@@ -63,7 +63,7 @@ contract MockOperation is Initializable, IOperation {
                 totals[i] = total;
             } else {
                 total = _inAmounts[0].mul(times).div(divisor);
-                msg.sender.transfer(total);
+                Address.sendValue(msg.sender, total);
                 emit OperationExecuted(_inAmounts, totals);
                 totals[i] = total;
             }

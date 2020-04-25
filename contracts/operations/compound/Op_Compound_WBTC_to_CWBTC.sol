@@ -2,12 +2,11 @@ pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "./ICToken.sol";
 import "../../base/IOperation.sol";
 
 
-contract Op_Compound_WBTC_to_CWBTC is Initializable, IOperation {
+contract Op_Compound_WBTC_to_CWBTC is IOperation {
     string public constant VERSION = "1.0.0";
 
     using SafeMath for uint256;
@@ -17,7 +16,7 @@ contract Op_Compound_WBTC_to_CWBTC is Initializable, IOperation {
     address public WBTC;
     address public cWBTC;
 
-    function initialize() public initializer {
+    constructor() public {
         WBTC = address($(WBTC));
         cWBTC = address($(CWBTC));
         approveToken();

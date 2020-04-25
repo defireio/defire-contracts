@@ -2,12 +2,11 @@ pragma solidity ^0.5.0;
 
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "./ICToken.sol";
 import "../../base/IOperation.sol";
 
 
-contract Op_Compound_CUSDC_to_USDC is Initializable, IOperation {
+contract Op_Compound_CUSDC_to_USDC is IOperation {
     string public constant VERSION = "1.0.0";
 
     using SafeMath for uint256;
@@ -17,7 +16,7 @@ contract Op_Compound_CUSDC_to_USDC is Initializable, IOperation {
     address public USDC;
     address public cUSDC;
 
-    function initialize() public initializer {
+    constructor() public {
         USDC = address($(USDC));
         cUSDC = address($(CUSDC));
     }
@@ -47,7 +46,10 @@ contract Op_Compound_CUSDC_to_USDC is Initializable, IOperation {
         uint256 finalAmountCUSDC = IERC20(cUSDC).balanceOf(address(this));
 
         //Execute operation
-        require(ICToken(cUSDC).redeem(finalAmountCUSDC) == 0, "operation failed");
+        require(
+            ICToken(cUSDC).redeem(finalAmountCUSDC) == 0,
+            "operation failed"
+        );
         require(IERC20(cUSDC).balanceOf(address(this)) == 0, "CUSDC remainder");
 
         //Send out assets back

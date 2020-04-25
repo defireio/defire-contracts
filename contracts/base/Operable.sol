@@ -2,6 +2,7 @@ pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./IOperation.sol";
@@ -204,7 +205,8 @@ contract Operable is Initializable, AssetManager {
             //Manage if fixed or percentage
             if (outAmount.isPercentage) {
                 if (outAmount.asset == address(0)) {
-                    outAmount.to.transfer(
+                    Address.sendValue(
+                        outAmount.to,
                         _outputs[assetIndex].mul(outAmount.amount).div(1 ether)
                     );
                 } else {
@@ -219,7 +221,7 @@ contract Operable is Initializable, AssetManager {
                     "Output amount less than the specified to redirect"
                 );
                 if (outAmount.asset == address(0)) {
-                    outAmount.to.transfer(outAmount.amount);
+                    Address.sendValue(outAmount.to, outAmount.amount);
                 } else {
                     IERC20(outAmount.asset).transfer(
                         outAmount.to,

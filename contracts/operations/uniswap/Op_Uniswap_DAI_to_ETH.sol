@@ -1,13 +1,13 @@
 pragma solidity ^0.5.0;
 
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./IUniswap.sol";
 import "../../base/IOperation.sol";
 
 
-contract Op_Uniswap_DAI_to_ETH is Initializable, IOperation {
+contract Op_Uniswap_DAI_to_ETH is IOperation {
     string public constant VERSION = "1.0.0";
 
     using SafeMath for uint256;
@@ -22,7 +22,7 @@ contract Op_Uniswap_DAI_to_ETH is Initializable, IOperation {
     address public UNISWAP;
     address public DAI;
 
-    function initialize() public initializer {
+    constructor() public {
         UNISWAP = address($(UNISWAP));
         DAI = address($(DAI));
         approveToken();
@@ -91,7 +91,7 @@ contract Op_Uniswap_DAI_to_ETH is Initializable, IOperation {
 
         //Send out assets back
         uint256 ethBalance = address(this).balance;
-        msg.sender.transfer(ethBalance);
+        Address.sendValue(msg.sender, ethBalance);
         require(address(this).balance == 0, "ETH remainder");
 
         emit OperationExecuted(finalAmountDAI, minEth, deadline, ethBalance);

@@ -1,13 +1,12 @@
 pragma solidity ^0.5.0;
 
-import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "./IUniswap.sol";
 import "../../base/IOperation.sol";
 
 
-contract Op_Uniswap_ETH_to_DAI is Initializable, IOperation {
+contract Op_Uniswap_ETH_to_DAI is IOperation {
     string public constant VERSION = "1.0.0";
 
     using SafeMath for uint256;
@@ -22,7 +21,7 @@ contract Op_Uniswap_ETH_to_DAI is Initializable, IOperation {
     address payable public UNISWAP;
     address public DAI;
 
-    function initialize() public initializer {
+    constructor() public {
         UNISWAP = address($(UNISWAP));
         DAI = address($(DAI));
     }
