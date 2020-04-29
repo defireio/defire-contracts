@@ -1,6 +1,7 @@
 pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts-ethereum-package/contracts/utils/Address.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/upgrades/contracts/application/App.sol";
@@ -67,6 +68,11 @@ contract DefireFund is
     }
 
     /**
+     * Fallback function accepts Ether transactions.
+     */
+    function() external payable {}
+
+    /**
      * Creates an ERC20 token to represent shares of the fund.
      * @param _app contract for the upgradeable application.
      */
@@ -115,16 +121,26 @@ contract DefireFund is
         internal
     {
         address[] memory currentAssets = getAssets();
-        if (currentAssets.length == 0) {
+        if (
+            currentAssets.length == 0 ||
+            (currentAssets.length == 1 && address(this).balance == msg.value) //Received ethers in deposit
+        ) {
             //Can deposit any valid asset
             uint256 sum = 0;
             for (uint256 i = 0; i < _assets.length; i++) {
                 checkValidAsset(_assets[i]);
-                IERC20(_assets[i]).transferFrom(
-                    msg.sender,
-                    address(this),
-                    _amounts[i]
-                );
+                if (_assets[i] == address(0)) {
+                    require(
+                        _amounts[i] == msg.value,
+                        "DefireFund: invalid amount of ethers deposited."
+                    );
+                } else {
+                    IERC20(_assets[i]).transferFrom(
+                        msg.sender,
+                        address(this),
+                        _amounts[i]
+                    );
+                }
                 sum = sum.add(_amounts[i]);
             }
             //Mint tokens to sender. For an intial value reference, it mints the sum of amounts.
@@ -136,28 +152,39 @@ contract DefireFund is
                 "DefireFund: must deposit the same assets than the funds."
             );
             //Calculate the share. It is checked that there is at least one asset in params
-            uint256 share = _amounts[0].mul(1 ether).div(
-                IERC20(_assets[0]).balanceOf(address(this))
-            );
+            uint256 share = _assets[0] == address(0)
+                ? _amounts[0].mul(1 ether).div(address(this).balance)
+                : _amounts[0].mul(1 ether).div(
+                    IERC20(_assets[0]).balanceOf(address(this))
+                );
             for (uint256 i = 0; i < _assets.length; i++) {
                 require(
                     assets[i] == currentAssets[i],
                     "DefireFund: assets to deposit must be in the right order that getAssets()"
                 );
                 //Check it is the right share
-                uint256 amountToDeposit = IERC20(_assets[i])
-                    .balanceOf(address(this))
-                    .mul(share)
-                    .div(1 ether);
+                uint256 amountToDeposit = _assets[i] == address(0)
+                    ? address(this).balance.mul(share).div(1 ether)
+                    : IERC20(_assets[i])
+                        .balanceOf(address(this))
+                        .mul(share)
+                        .div(1 ether);
                 require(
                     amountToDeposit <= _amounts[i],
                     "DefireFund: not enough amount to deposit"
                 );
-                IERC20(_assets[i]).transferFrom(
-                    msg.sender,
-                    address(this),
-                    amountToDeposit
-                );
+                if (_assets[i] != address(0)) {
+                    require(
+                        _amounts[i] == msg.value,
+                        "DefireFund: invalid amount of ethers deposited."
+                    );
+                } else {
+                    IERC20(_assets[i]).transferFrom(
+                        msg.sender,
+                        address(this),
+                        amountToDeposit
+                    );
+                }
             }
             //Mint tokens to sender
             token.mint(msg.sender, token.totalSupply().mul(share).div(1 ether));
@@ -182,11 +209,16 @@ contract DefireFund is
         token.burn(_amount);
         for (uint256 i = 0; i < fundAssets.length; i++) {
             address asset = fundAssets[i];
-            uint256 amount = IERC20(asset)
-                .balanceOf(address(this))
-                .mul(share)
-                .div(1 ether);
-            IERC20(asset).transfer(msg.sender, amount);
+            if (asset == address(0)) {
+                uint256 amount = address(this).balance.mul(share).div(1 ether);
+                Address.sendValue(msg.sender, amount);
+            } else {
+                uint256 amount = IERC20(asset)
+                    .balanceOf(address(this))
+                    .mul(share)
+                    .div(1 ether);
+                IERC20(asset).transfer(msg.sender, amount);
+            }
         }
     }
 
@@ -200,10 +232,6 @@ contract DefireFund is
         payable
         returns (uint256[] memory)
     {
-        require(
-            msg.value == 0,
-            "DefireFund: does not receive ethers, use WETH instead"
-        );
         if (isDeposit(_params)) {
             address[] memory assets = getAssetsToDeposit(_params);
             require(
