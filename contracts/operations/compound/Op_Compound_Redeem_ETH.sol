@@ -29,24 +29,14 @@ contract Op_Compound_Redeem_ETH is IOperation {
 
     /**
      * Execute the operation.
-     * @param _inAmounts amounts of assets in.
      * @param _params params is the amount to convert to CETH
      */
-    function operate(uint256[] calldata _inAmounts, bytes calldata _params)
+    function operate(bytes calldata _params)
         external
         payable
         returns (uint256[] memory)
     {
         require(msg.value == 0, "This operation does not receive ethers");
-
-        //In assets amounts
-        require(_inAmounts.length != 0, "Need to set CETH amount");
-        uint256 amountCETH = _inAmounts[0];
-
-        //Get in assets
-        if (amountCETH > 0) {
-            IERC20(cETH).transferFrom(msg.sender, address(this), amountCETH);
-        }
 
         //Get total balance of CETH, some may come from other operations
         uint256 finalAmountCETH = IERC20(cETH).balanceOf(address(this));

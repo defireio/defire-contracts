@@ -83,7 +83,7 @@ contract DefirePortfolio is
         public
         onlyPortfolioOwnerOrManager
     {
-        _executeMultipleOperations(_operations, true);
+        _executeMultipleOperations(_operations, true, false);
         emit PortfolioOperationsExecuted(_operations);
     }
 
@@ -95,7 +95,7 @@ contract DefirePortfolio is
         public
         onlyPortfolioOwnerOrManager
     {
-        _executeSingleOperation(_operation, true);
+        _executeSingleOperation(_operation, true, false);
         emit PortfolioOperationExecuted(_operation);
     }
 

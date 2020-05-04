@@ -7,10 +7,9 @@ pragma solidity ^0.5.0;
 interface IOperation {
     /**
      * Execute the operation.
-     * @param _inAmounts amounts of assets in.
      * @param _params params of the operation.
      */
-    function operate(uint256[] calldata _inAmounts, bytes calldata _params)
+    function operate(bytes calldata _params)
         external
         payable
         returns (uint256[] memory);

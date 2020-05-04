@@ -66,11 +66,13 @@ contract Operable is Initializable, AssetManager {
     /**
      * Execute an operation.
      * @param _operation operation to execute.
-     * @param _checkSafe check if operations is official (in registry).
+     * @param _checkSafe check if operations is official (in registry or whitelist).
+     * @param _assetsFromSender true if assets must be transferred from sender.
      */
     function _executeSingleOperation(
         Operation memory _operation,
-        bool _checkSafe
+        bool _checkSafe,
+        bool _assetsFromSender
     ) internal {
         if (_checkSafe) {
             //Cannot have out amounts, everything goes to sender
@@ -79,17 +81,19 @@ contract Operable is Initializable, AssetManager {
                 "Single operation execution cannot send out assets to another adddress"
             );
         }
-        _executeOperation(_operation, _checkSafe);
+        _executeOperation(_operation, _checkSafe, _assetsFromSender);
     }
 
     /**
      * Execute a set of operations secuencially. Only managers can execute them.
      * @param _operations array of operations to be executed.
-     * @param _checkSafe check if operations is official (in registry).
+     * @param _checkSafe check if operations is official (in registry or whitelist).
+     * @param _assetsFromSender true if assets must be transferred from sender.
      */
     function _executeMultipleOperations(
         Operation[] memory _operations,
-        bool _checkSafe
+        bool _checkSafe,
+        bool _assetsFromSender
     ) internal {
         for (uint8 i = 0; i < _operations.length; i++) {
             if (_checkSafe) {
@@ -98,7 +102,7 @@ contract Operable is Initializable, AssetManager {
                     "Out asset operations must be transferred to executed operations."
                 );
             }
-            _executeOperation(_operations[i], _checkSafe);
+            _executeOperation(_operations[i], _checkSafe, _assetsFromSender);
         }
     }
 
@@ -130,11 +134,14 @@ contract Operable is Initializable, AssetManager {
     /**
      * Execute an operations.
      * @param _operation operation to execute.
-     * @param _checkSafe check if operations is official (in registry).
+     * @param _checkSafe check if operations is official (in registry or whitelist).
+     * @param _assetsFromSender true if assets must be transferred from sender.
      */
-    function _executeOperation(Operation memory _operation, bool _checkSafe)
-        private
-    {
+    function _executeOperation(
+        Operation memory _operation,
+        bool _checkSafe,
+        bool _assetsFromSender
+    ) private {
         if (_checkSafe) {
             checkValidOperation(_operation.addr);
         }
@@ -157,25 +164,39 @@ contract Operable is Initializable, AssetManager {
             if (asset == address(0)) {
                 ethersAmount = _operation.inAmounts[i];
             } else {
-                //Approve token transfer
-                IERC20(asset).approve(_operation.addr, _operation.inAmounts[i]);
+                if (_assetsFromSender) {
+                    IERC20(asset).transferFrom(
+                        msg.sender,
+                        _operation.addr,
+                        _operation.inAmounts[i]
+                    );
+                } else {
+                    //Approve token transfer
+                    IERC20(asset).transfer(
+                        _operation.addr,
+                        _operation.inAmounts[i]
+                    );
+                }
             }
         }
 
         uint256[] memory outputs;
         if (ethersAmount > 0) {
             outputs = IOperation(_operation.addr).operate.value(ethersAmount)(
-                _operation.inAmounts,
                 _operation.params
             );
         } else {
-            outputs = IOperation(_operation.addr).operate(
-                _operation.inAmounts,
-                _operation.params
-            );
+            outputs = IOperation(_operation.addr).operate(_operation.params);
         }
 
         _redirectOutputs(_operation, outputs, _checkSafe);
+
+        if (_assetsFromSender) {
+            //Transfer out assets to sender
+            address[] memory outAssets = IOperation(_operation.addr)
+                .getOutAssets(_operation.params);
+            _transferAssetsToSender(outAssets);
+        }
     }
 
     /**
@@ -241,8 +262,7 @@ contract Operable is Initializable, AssetManager {
             require(operationWhitelisted[operation], "Invalid operation");
         else {
             require(
-                (operationRegistry.isElement(operation) ||
-                    fundRegistry.isFund(operation)),
+                operationRegistry.isElement(operation),
                 "Invalid operation"
             );
         }
@@ -254,5 +274,23 @@ contract Operable is Initializable, AssetManager {
      */
     function checkValidAsset(address _asset) internal view {
         require(isAsset(_asset), "Invalid asset");
+    }
+
+    /**
+     * Transfer all asset balance from this contract to sender.
+     * @param _outAssets list of assets to transfer.
+     */
+    function _transferAssetsToSender(address[] memory _outAssets) private {
+        //Manage in assets
+        for (uint8 i = 0; i < _outAssets.length; i++) {
+            address asset = _outAssets[i];
+            if (asset != address(0)) {
+                uint256 amount = IERC20(asset).balanceOf(address(this));
+                IERC20(asset).transfer(msg.sender, amount);
+            } else {
+                uint256 ethBalance = address(this).balance;
+                Address.sendValue(msg.sender, ethBalance);
+            }
+        }
     }
 }

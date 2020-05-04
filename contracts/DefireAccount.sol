@@ -55,22 +55,7 @@ contract DefireAccount is Initializable, Operable {
         public
         payable
     {
-        for (uint8 i = 0; i < _operations.length; i++) {
-            _transferAssetsFromSender(
-                IOperation(_operations[i].addr).getInAssets(
-                    _operations[i].params
-                ),
-                _operations[i].inAmounts
-            );
-        }
-        _executeMultipleOperations(_operations, _checkSafe);
-        for (uint8 i = 0; i < _operations.length; i++) {
-            _transferAssetsToSender(
-                IOperation(_operations[i].addr).getOutAssets(
-                    _operations[i].params
-                )
-            );
-        }
+        _executeMultipleOperations(_operations, _checkSafe, true);
         emit AccountOperationsExecuted(_operations, _checkSafe);
     }
 
@@ -83,55 +68,8 @@ contract DefireAccount is Initializable, Operable {
         public
         payable
     {
-        _transferAssetsFromSender(
-            IOperation(_operation.addr).getInAssets(_operation.params),
-            _operation.inAmounts
-        );
-        _executeSingleOperation(_operation, _checkSafe);
-        _transferAssetsToSender(
-            IOperation(_operation.addr).getOutAssets(_operation.params)
-        );
+        _executeSingleOperation(_operation, _checkSafe, true);
         emit AccountOperationExecuted(_operation, _checkSafe);
     }
 
-    /**
-     * Transfer assets from sender to this contract.
-     * @param _inAssets list of assets to transfer.
-     * @param _inAmounts list of assets to transfer.
-     */
-    function _transferAssetsFromSender(
-        address[] memory _inAssets,
-        uint256[] memory _inAmounts
-    ) private {
-        //Manage in assets
-        for (uint8 i = 0; i < _inAmounts.length; i++) {
-            address asset = _inAssets[i];
-            if (asset != address(0)) {
-                //Get tokens from account
-                IERC20(asset).transferFrom(
-                    msg.sender,
-                    address(this),
-                    _inAmounts[i]
-                );
-            }
-        }
-    }
-
-    /**
-     * Transfer all asset balance from this contract to sender.
-     * @param _inAssets list of assets to transfer.
-     */
-    function _transferAssetsToSender(address[] memory _inAssets) private {
-        //Manage in assets
-        for (uint8 i = 0; i < _inAssets.length; i++) {
-            address asset = _inAssets[i];
-            if (asset != address(0)) {
-                uint256 amount = IERC20(asset).balanceOf(address(this));
-                IERC20(asset).transfer(msg.sender, amount);
-            } else {
-                uint256 ethBalance = address(this).balance;
-                Address.sendValue(msg.sender, ethBalance);
-            }
-        }
-    }
 }

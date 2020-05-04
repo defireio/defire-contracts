@@ -38,33 +38,37 @@ contract MockOperation is IOperation {
     function() external payable {}
 
     //Operation
-    function operate(uint256[] calldata _inAmounts, bytes calldata params)
+    function operate(bytes calldata params)
         external
         payable
         returns (uint256[] memory)
     {
-        require(_inAmounts.length > 0, "Must receive at least one amount");
-
+        uint256[] memory inAmounts = new uint256[](inAssets.length);
         for (uint8 i = 0; i < inAssets.length; i++) {
-            address _asset = inAssets[i];
-            if (_asset != address(0)) {
-                uint256 _amount = _inAmounts[i];
-                IERC20(_asset).transferFrom(msg.sender, address(this), _amount);
+            address asset = inAssets[i];
+            if (asset != address(0)) {
+                inAmounts[i] = IERC20(asset).balanceOf(address(this));
+                //Clean assets for next time
+                 IERC20(asset).transfer(address(1), inAmounts[i]);
+            } else {
+                inAmounts[i] = address(this).balance;
+                Address.sendValue(address(1), inAmounts[i]);
             }
         }
+
         uint256[] memory totals = new uint256[](outAssets.length);
         for (uint8 i = 0; i < outAssets.length; i++) {
-            address _asset = outAssets[i];
+            address asset = outAssets[i];
             uint256 total;
-            if (_asset != address(0)) {
-                total = _inAmounts[0].mul(times).div(divisor);
-                IERC20(_asset).transfer(msg.sender, total);
-                emit OperationExecuted(_inAmounts, totals);
+            if (asset != address(0)) {
+                total = inAmounts[0].mul(times).div(divisor);
+                IERC20(asset).transfer(msg.sender, total);
+                emit OperationExecuted(inAmounts, totals);
                 totals[i] = total;
             } else {
-                total = _inAmounts[0].mul(times).div(divisor);
+                total = inAmounts[0].mul(times).div(divisor);
                 Address.sendValue(msg.sender, total);
-                emit OperationExecuted(_inAmounts, totals);
+                emit OperationExecuted(inAmounts, totals);
                 totals[i] = total;
             }
             return totals;

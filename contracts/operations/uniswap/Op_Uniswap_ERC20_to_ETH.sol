@@ -53,33 +53,19 @@ contract Op_Uniswap_ERC20_to_ETH is IOperation {
 
     /**
      * Execute the operation.
-     * @param _inAmounts amounts of assets in.
      * @param _params params is the amount of in asset to swap to ETH, the min amount of ETH to get and the deadline
      */
-    function operate(uint256[] calldata _inAmounts, bytes calldata _params)
+    function operate(bytes calldata _params)
         external
         payable
         returns (uint256[] memory)
     {
         require(msg.value == 0, "This operation does not receive ethers");
 
-        //In assets amounts
-        require(_inAmounts.length != 0, "Need to set in asset amount");
-        uint256 amountInAsset = _inAmounts[0];
-
         //Get params
         uint256 minEth;
         uint256 deadline;
         (minEth, deadline) = getParams(_params);
-
-        //Get in assets
-        if (amountInAsset > 0) {
-            IERC20(inAsset).transferFrom(
-                msg.sender,
-                address(this),
-                amountInAsset
-            );
-        }
 
         //Get total balance of in asset, some may come from other operations
         uint256 finalAmountInAsset = IERC20(inAsset).balanceOf(address(this));

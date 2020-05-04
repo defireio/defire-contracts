@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-ethereum-package/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/upgrades/contracts/application/App.sol";
 import "@openzeppelin/upgrades/contracts/Initializable.sol";
-import "./base/IOperation.sol";
 import "./base/Operable.sol";
 import "./base/FundToken.sol";
 import "./registry/AssetRegistry.sol";
@@ -20,16 +19,9 @@ import "./roles/ManagerRole.sol";
  * @dev DefireFund is a contract that represents a fund for DeFi assets,
  * allowing fund managers to operate those assets.
  */
-contract DefireFund is
-    Initializable,
-    Context,
-    Operable,
-    ManagerRole,
-    IOperation
-{
+contract DefireFund is Initializable, Context, Operable, ManagerRole {
     using SafeMath for uint256;
 
-    event OperationExecuted(bool isDeposit);
     event FundOperationExecuted(Operation operation);
     event FundOperationsExecuted(Operation[] operations);
 
@@ -97,7 +89,7 @@ contract DefireFund is
         public
         onlyManager
     {
-        _executeMultipleOperations(_operations, true);
+        _executeMultipleOperations(_operations, true, false);
         emit FundOperationsExecuted(_operations);
     }
 
@@ -106,7 +98,7 @@ contract DefireFund is
      * @param _operation operation to execute.
      */
     function executeOperation(Operation memory _operation) public onlyManager {
-        _executeSingleOperation(_operation, true);
+        _executeSingleOperation(_operation, true, false);
         emit FundOperationExecuted(_operation);
     }
 
@@ -118,15 +110,17 @@ contract DefireFund is
      * @param _amounts amounts of assets to deposit.
      */
     function deposit(address[] memory _assets, uint256[] memory _amounts)
-        internal
+        public
+        payable
     {
         address[] memory currentAssets = getAssets();
+        uint256 totalTokens;
         if (
             currentAssets.length == 0 ||
             (currentAssets.length == 1 && address(this).balance == msg.value) //Received ethers in deposit
         ) {
             //Can deposit any valid asset
-            uint256 sum = 0;
+            totalTokens = 0;
             for (uint256 i = 0; i < _assets.length; i++) {
                 checkValidAsset(_assets[i]);
                 if (_assets[i] == address(0)) {
@@ -141,10 +135,8 @@ contract DefireFund is
                         _amounts[i]
                     );
                 }
-                sum = sum.add(_amounts[i]);
+                totalTokens = totalTokens.add(_amounts[i]);
             }
-            //Mint tokens to sender. For an intial value reference, it mints the sum of amounts.
-            token.mint(msg.sender, sum);
         } else {
             //Has to deposit existing assets
             require(
@@ -187,8 +179,10 @@ contract DefireFund is
                 }
             }
             //Mint tokens to sender
-            token.mint(msg.sender, token.totalSupply().mul(share).div(1 ether));
+            totalTokens = token.totalSupply().mul(share).div(1 ether);
         }
+        //Mint tokens to sender. For an intial value reference, it mints the sum of amounts.
+        token.mint(msg.sender, totalTokens);
     }
 
     /**
@@ -197,7 +191,7 @@ contract DefireFund is
      * It receives and burns the fund token.
      * @param _amount amount of fund token to deposit.
      */
-    function withdraw(uint256 _amount) internal {
+    function withdraw(uint256 _amount) public {
         address[] memory fundAssets = getAssets();
         require(
             fundAssets.length > 0,
@@ -207,119 +201,20 @@ contract DefireFund is
         uint256 share = _amount.mul(1 ether).div(totalTokens);
         token.transferFrom(msg.sender, address(this), _amount);
         token.burn(_amount);
+        uint256 outAmount;
         for (uint256 i = 0; i < fundAssets.length; i++) {
             address asset = fundAssets[i];
             if (asset == address(0)) {
-                uint256 amount = address(this).balance.mul(share).div(1 ether);
-                Address.sendValue(msg.sender, amount);
+                outAmount = address(this).balance.mul(share).div(1 ether);
+                Address.sendValue(msg.sender, outAmount);
             } else {
-                uint256 amount = IERC20(asset)
+                outAmount = IERC20(asset)
                     .balanceOf(address(this))
                     .mul(share)
                     .div(1 ether);
-                IERC20(asset).transfer(msg.sender, amount);
+                IERC20(asset).transfer(msg.sender, outAmount);
             }
         }
-    }
-
-    /**
-     * Execute the withdraw or deposit operation.
-     * @param _inAmounts amounts of assets in.
-     * @param _params params of the operation.
-     */
-    function operate(uint256[] calldata _inAmounts, bytes calldata _params)
-        external
-        payable
-        returns (uint256[] memory)
-    {
-        if (isDeposit(_params)) {
-            address[] memory assets = getAssetsToDeposit(_params);
-            require(
-                assets.length == _inAmounts.length,
-                "DefireFund: number of amounts does not match number of assets"
-            );
-            deposit(assets, _inAmounts);
-            emit OperationExecuted(true);
-            return _inAmounts;
-        } else {
-            require(
-                _inAmounts.length == 1,
-                "DefireFund: neet to set only the amount of fund token used to withdraw"
-            );
-            withdraw(_inAmounts[0]);
-            emit OperationExecuted(false);
-
-            return _inAmounts;
-        }
-    }
-
-    /**
-     * Returns the assets that the operation receives.
-     * @param _params params of the operation.
-     */
-    function getInAssets(bytes calldata _params)
-        external
-        view
-        returns (address[] memory)
-    {
-        address[] memory _assets;
-        if (isDeposit(_params)) {
-            if (getTotalAssets() == 0) {
-                return getAssetsToDeposit(_params);
-            } else {
-                return getAssets();
-            }
-        } else {
-            //Returns fund token
-            _assets = new address[](1);
-            _assets[0] = address(token);
-            return _assets;
-        }
-    }
-
-    /**
-     * Returns the assets that the operation returns.
-     * @param _params params of the operation.
-     */
-    function getOutAssets(bytes calldata _params)
-        external
-        view
-        returns (address[] memory)
-    {
-        address[] memory _assets;
-        if (isDeposit(_params)) {
-            //Returns fund token
-            _assets = new address[](1);
-            _assets[0] = address(token);
-            return _assets;
-        } else {
-            if (getTotalAssets() == 0) {
-                address[] memory empty;
-                return empty;
-            } else {
-                return getAssets();
-            }
-        }
-    }
-
-    /**
-     * Returns true if operation is deposit.
-     * @param _params params of the operation.
-     */
-    function isDeposit(bytes memory _params) public pure returns (bool) {
-        return abi.decode(_params, (bool));
-    }
-
-    /**
-     * Returns the assets to deposit.
-     * @param _params params of the operation.
-     */
-    function getAssetsToDeposit(bytes memory _params)
-        public
-        pure
-        returns (address[] memory assets)
-    {
-        (, assets) = abi.decode(_params, (bool, address[]));
     }
 
     /**

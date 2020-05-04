@@ -21,7 +21,7 @@ contract FundToken is Initializable, ERC20Mintable, ERC20Burnable {
      * Returns true of the token belons to that fund.
      * @param _fund fund to check.
      */
-    function isFund(address _fund) public view returns (bool) {
+    function isFromFund(address _fund) public view returns (bool) {
         return isMinter(_fund);
     }
 }

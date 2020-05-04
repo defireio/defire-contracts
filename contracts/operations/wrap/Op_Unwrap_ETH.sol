@@ -31,24 +31,14 @@ contract Op_Unwrap_ETH is IOperation {
 
     /**
      * Execute the operation.
-     * @param _inAmounts amounts of assets in.
      * @param _params params is the amount of WETH to unwrap
      */
-    function operate(uint256[] calldata _inAmounts, bytes calldata _params)
+    function operate(bytes calldata _params)
         external
         payable
         returns (uint256[] memory)
     {
         require(msg.value == 0, "This operation does not receive ethers");
-
-        //In assets amounts
-        require(_inAmounts.length != 0, "Need to set WETH amount");
-        uint256 amountWETH = _inAmounts[0];
-
-        //Get in assets
-        if (amountWETH > 0) {
-            IERC20(WETH).transferFrom(msg.sender, address(this), amountWETH);
-        }
 
         //Get total balance of WETH, some may come from other operations
         uint256 finalAmountWETH = IERC20(WETH).balanceOf(address(this));

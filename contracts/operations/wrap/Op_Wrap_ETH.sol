@@ -23,7 +23,6 @@ contract Op_Wrap_ETH is IOperation {
 
     /**
      * Execute the operation.
-     * @param _inAmounts amounts of assets in.
      * @param _params params is the amount of ETH to wrap
      */
     function operate(uint256[] calldata _inAmounts, bytes calldata _params)
@@ -31,16 +30,6 @@ contract Op_Wrap_ETH is IOperation {
         payable
         returns (uint256[] memory)
     {
-        //In assets amounts
-        require(_inAmounts.length != 0, "Need to set ETH amount");
-        uint256 amountETH = _inAmounts[0];
-
-        //Get in assets
-        require(
-            msg.value == amountETH,
-            "Incorrect amount of ethers sent to the operation"
-        );
-
         //Get total balance of ETH, some may come from other operations
         uint256 finalAmountETH = address(this).balance;
 
