@@ -74,13 +74,6 @@ contract Operable is Initializable, AssetManager {
         bool _checkSafe,
         bool _assetsFromSender
     ) internal {
-        if (_checkSafe) {
-            //Cannot have out amounts, everything goes to sender
-            require(
-                _operation.outAmounts.length == 0,
-                "Single operation execution cannot send out assets to another adddress"
-            );
-        }
         _executeOperation(_operation, _checkSafe, _assetsFromSender);
     }
 
@@ -96,39 +89,8 @@ contract Operable is Initializable, AssetManager {
         bool _assetsFromSender
     ) internal {
         for (uint8 i = 0; i < _operations.length; i++) {
-            if (_checkSafe) {
-                require(
-                    validOutOperations(_operations[i], _operations),
-                    "Out asset operations must be transferred to executed operations."
-                );
-            }
             _executeOperation(_operations[i], _checkSafe, _assetsFromSender);
         }
-    }
-
-    /**
-     * Verify that if an operation has an out operation, the second one is executed
-     * @param _operation operation to be verified.
-     */
-    function validOutOperations(
-        Operation memory _operation,
-        Operation[] memory _operations
-    ) private view returns (bool) {
-        if (_operation.outAmounts.length > 0) {
-            for (uint8 i = 0; i < _operation.outAmounts.length; i++) {
-                //Out operation cannot equal operation itself
-                if (_operation.addr == _operation.outAmounts[i].to) {
-                    return false;
-                }
-                for (uint8 j = 0; j < _operations.length; j++) {
-                    if (_operations[j].addr == _operation.outAmounts[i].to) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-        return true;
     }
 
     /**
