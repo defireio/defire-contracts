@@ -17,6 +17,11 @@ contract Op_Fund_Deposit_Withdraw is IOperation {
     constructor() public {}
 
     /**
+     * Fallback function accepts Ether transactions.
+     */
+    function() external payable {}
+
+    /**
      * Execute the withdraw or deposit operation.
      * @param _params params of the operation.
      */

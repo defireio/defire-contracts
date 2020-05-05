@@ -25,7 +25,7 @@ contract Op_Wrap_ETH is IOperation {
      * Execute the operation.
      * @param _params params is the amount of ETH to wrap
      */
-    function operate(uint256[] calldata _inAmounts, bytes calldata _params)
+    function operate(bytes calldata _params)
         external
         payable
         returns (uint256[] memory)
